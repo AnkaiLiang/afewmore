@@ -122,10 +122,11 @@ I decide to use shell script to finish this task.
 1. At the beginning, I look for the arguments which inputted by user.
 I found two way, one is manually dealing with them. It requires users to input arguments with explicit position. The other way is using `getopts`, a useful tool which can handle the short options. 
 [Tutorial](http://wiki.bash-hackers.org/howto/getopts_tutorial)
-
 After testing, I found that if -d is missing an argument, it will instead of taking the next option as the parameter. So I added a check in each options which need value.
 
-2. Then I need to grep the information of target instance by a given instance-id.
+2. Then I need to grab the information of target instance by a given instance-id.
 I learned how to write a funtion in Shell Script. When I test the result shell function return, I found $? only return the numeric result, and the variable without `local` declaration would domain global, a good choice to record the function result.
 About the parameter passing, if I use variable to transfer the json data, it will lose the line feeds. So I use the temp file to store the json data.
-By the way, use 
+By the way, using '&' to make `echo command` running in background in funtion and using 'a=`func args`' outside is also a good way to implement funtion return. But in this way, it can't exit entire script in function when meet error. Maybe the main shell create a sub-shell environment to run sub-command.
+
+3. Next I try to ensure what is UserName when ssh to remote server. Create a table, acquire image-Description, and use awk to match UserName. When use awk to do regular expression searching, I have to transfer the shell variables into awk.[Tutorial](https://www.gnu.org/software/gawk/manual/gawk.html#Using-Shell-Variables)

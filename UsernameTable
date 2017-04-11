@@ -1,0 +1,11 @@
+Ubuntu:ubuntu
+ubuntu:ubuntu
+Amazon Linux:ec2-user
+amzn:ec2-user
+Centos:centos
+RHEL:ec2-user
+rhel:ec2-user
+Red Hat:ec2-user
+Fedora:ec2-user
+SUSE:ec2-user
+suse:ec2-user
