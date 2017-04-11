@@ -4,32 +4,48 @@ catalog="/data"
 num=10
 verbose="false"
 
+log()
+{
+	if [ "$verbose" = "true" ];
+	then
+		echo $@ 
+	fi
+}
+
+iferr()
+{
+	if [ $? = 1 ] 
+	then 
+		echo $@ >&2
+		exit 1;
+	fi
+}
 usage() 
 {
 	echo "Usage: \n          afewmore [-hv] [-d dir] [-n num] instance"
 }
 getInfo()
 {
-	grep "$1" < temp.txt >tempGrepRes.txt
+	grep "\"$1\"" < temp.txt >tempGrepRes.txt
 	if [ $? != 0 ]
 	then
-		echo "Can not get the $1 info for ${InstanceId}. Please check instance-id and its state" >&2
+		echo "Fail to get the $1 info." >&2
 		exit 1;
 	fi
 #	res=`awk '{print $2}' <<< ${temp} | uniq`
-	awk '{print $2}' < tempGrepRes.txt | uniq&
+	tr -d "\:\","  < tempGrepRes.txt | awk '{print $2}' | uniq
 }
 getAllInfo()
 {
 	InstanceId=$1
-	aws ec2 describe-instances --filters "Name=instance-id,Values=${InstanceId}" | tr "\:\"" " " > temp.txt
-	PublicDnsName=`getInfo PublicDnsName`
-	ImageId=`getInfo ImageId`
-	InstanceType=`getInfo InstanceType`
-	KeyName=`getInfo KeyName`
-	GroupName=`getInfo GroupName`
-	PublicDnsName=`getInfo PublicDnsName`
-	InstanceId=`getInfo InstanceId`
+	aws ec2 describe-instances --filters "Name=instance-id,Values=${InstanceId}" > temp.txt
+	PublicDnsName=$(getInfo PublicDnsName)
+	ImageId=$(getInfo ImageId)
+	InstanceType=$(getInfo InstanceType)
+	KeyName=$(getInfo KeyName)
+	GroupName=$(getInfo GroupName)
+	PublicDnsName=$(getInfo PublicDnsName)
+	iferr "Fail to get the info for ${InstanceId}. Please check instance-id and its state." >&2
 }
 
 while getopts ":d:n:hv" arg; do
@@ -81,23 +97,40 @@ then
 	exit 1
 fi
 
-if [ "$verbose" = "true" ];
-then 
-	echo "Arguments format is correct." >&1
-	echo "Tring to acquire target instance's info..." >&1
+log "Arguments format is correct." 
+log "Tring to acquire target instance's info..."
+
+# get the info for origin instance
+
+targetId=$1
+getAllInfo $targetId
+targetPublicDns=${PublicDnsName}
+
+
+log "done."
+log "Target instance info: InstanceId=${InstanceId}, PublicDnsName=${PublicDnsName}, InstanceType=${InstanceType},\
+ ImageId=${ImageId}, KeyName=${KeyName}, GroupName=${GroupName}"
+log "Tring to ssh to target instance..." 
+
+## get the username according to image-id
+
+#Description=$(aws ec2 describe-images --filters "Name=image-id, Values=${ImageId}"\
+# | grep "\"Description\"" | awk -F ":" '{print $2}' | tr -d "\"")
+aws ec2 describe-images --filters "Name=image-id, Values=${ImageId}" > temp.txt
+ImageName=$(getInfo Name)
+username=$(cat UsernameTable | awk -F ":" -v pat="$ImageName" 'pat ~ $1 { print $2 }')
+if [ -z $username ]
+then
+	username="root"
 fi
 
-originId=$1
-getAllInfo $originId
+username=123;
 
-if [ "$verbose" = "true" ];
-then 
-echo "done." >&1
-echo "Target instance info: InstanceId=${InstanceId},PublicDnsName=${PublicDnsName},InstanceType=${InstanceType},\
-ImageId=${ImageId},KeyName=${KeyName},GroupName=${GroupName}" >&1
+if ssh $username@$PublicDnsName :;
+then echo successful
+	 log "username=$username, ImageName=$ImageName"
+else echo Fail
 fi
-#grep '$1' <<< $metadata
-#echo $metadata
 
 rm temp.txt
 rm tempGrepRes.txt
