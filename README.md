@@ -125,8 +125,17 @@ I found two way, one is manually dealing with them. It requires users to input a
 After testing, I found that if -d is missing an argument, it will instead of taking the next option as the parameter. So I added a check in each options which need value.
 
 2. Then I need to grab the information of target instance by a given instance-id.
-I learned how to write a funtion in Shell Script. When I test the result shell function return, I found $? only return the numeric result, and the variable without `local` declaration would domain global, a good choice to record the function result.
+I learned how to write a funtion in Shell Script. When I test the result shell function return, I found `$?` only return the numeric result, and the variable without `local` declaration would domain global, a good choice to record the function result.
 About the parameter passing, if I use variable to transfer the json data, it will lose the line feeds. So I use the temp file to store the json data.
 By the way, using '&' to make `echo command` running in background in funtion and using 'a=`func args`' outside is also a good way to implement funtion return. But in this way, it can't exit entire script in function when meet error. Maybe the main shell create a sub-shell environment to run sub-command.
+Tricky point, sometimes the response from aws contains some null data in some attributes. We should filter them by 'grep "^$"'
 
 3. Next I try to ensure what is UserName when ssh to remote server. Create a table, acquire image-Description, and use awk to match UserName. When use awk to do regular expression searching, I have to transfer the shell variables into awk.[Tutorial](https://www.gnu.org/software/gawk/manual/gawk.html#Using-Shell-Variables)
+
+4. I want to check whether shell sucessfully ssh to the Target server. But I noticed when I offer the wrong username, cli will go into interface and ask for password. If I want to automaticlly deal with the interface, I need install `expect`, that's unallowed. I don't have a better way to solve it.
+
+5. When trasfer the data between two instance, my test remote instance is NetBSD without rsync, I decided transfer the data by `scp`.
+6. Because setting up instance need some time. so I have to wait a few seconds then execute the copy mission.
+
+7. "Host key verification failed." I fail to use `scp` transfer data from remote instance to another remote one. I realized scp can't do that between two remote nodes. I need to copy one node's rsa public key to the other, then use ssh into one remote to do that transmission.
+8. Deal with the directory path. Before using `scp`, I have to make sure the directory's parent path exists. Use pattern matching to adjust `${path}` and `mkdir -p` to create in new instance.
