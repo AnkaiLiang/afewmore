@@ -40,6 +40,7 @@ getAllInfo()
 	InstanceType=$(getInfo InstanceType)
 	KeyName=$(getInfo KeyName)
 	GroupName=$(getInfo GroupName)
+	AvailabilityZone=$(getInfo AvailabilityZone)
 	PublicDnsName=$(getInfo PublicDnsName)
 	iferr "Fail to get the info for ${InstanceId}. Please check instance-id and its state."
 }
@@ -104,9 +105,9 @@ getAllInfo $targetId
 targetPublicDns=${PublicDnsName}
 
 
-log "done."
+log "done"
 log "Target instance info: InstanceId=${InstanceId}, PublicDnsName=${PublicDnsName}, InstanceType=${InstanceType},\
- ImageId=${ImageId}, KeyName=${KeyName}, GroupName=${GroupName}"
+ ImageId=${ImageId}, KeyName=${KeyName}, GroupName=${GroupName}, AvailabilityZone=${AvailabilityZone}"
 log "Tring to ssh to target instance..." 
 
 ## get the username according to image-id
@@ -144,7 +145,7 @@ log "Trying to get the rsa public key for target instance ${targetId}"
 rsa=$(ssh -o StrictHostKeyChecking=no ${username}@${targetPublicDns} "(test -e ~/.ssh/id_rsa || ssh-keygen -f ~/.ssh/id_rsa -q -P '');\
  cat ~/.ssh/id_rsa.pub";)
 iferr "Fail to get rsa public key"
-log "rsa=${rsa}"
+#log "rsa=${rsa}"
 log "done"
 
 
@@ -153,24 +154,30 @@ log "done"
 log "Trying to create ${num} new instances..."
 
 aws ec2 run-instances --image-id ${ImageId} --count ${num} --instance-type\
- ${InstanceType} --key-name ${KeyName} --security-groups ${GroupName} > temp.txt
+ ${InstanceType} --key-name ${KeyName} --security-groups ${GroupName} --placement AvailabilityZone=${AvailabilityZone} > temp.txt
 iferr "Fail to create new instances, plase check awscli configuration and network"
 
-log "done."
-log "Instances pending..."
+log "done"
+log "Waiting for instances pending..."
 getInfo InstanceId > listInstanceId.txt
-sleep 40s
+sleep 100s
 
 ## Deal with each new Instance
 for line in $(cat listInstanceId.txt)
 do
 	aws ec2 describe-instances --filters "Name=instance-id,Values=${line}" > temp.txt
 	state=$(getInfo Name)
+	count=1;
 	while [ "${state}" != "running" ];
 	do
+		count++;
 		sleep 5s
 		aws ec2 describe-instances --filters "Name=instance-id,Values=${line}" > temp.txt
 		state=$(getInfo Name) # loop until state = running
+		if [ count>15 ]
+		then
+			echo "Overtime, fail to get PublicDnsName for instance ${line}" >&2
+		fi
 	done
 	
 	newPublicDnsName=$(getInfo PublicDnsName)
@@ -179,13 +186,8 @@ do
 
 	log "Testing ssh to new instance ${line}..."
 
-	ssh -o StrictHostKeyChecking=no -o LogLevel=quiet ${username}@${newPublicDnsName} :
-	while [ $? != 0 ];
-	do
-		sleep 5s
-		ssh -o StrictHostKeyChecking=no -o LogLevel=quiet ${username}@${newPublicDnsName} :
-	done
-	log "done"
+	ssh -o StrictHostKeyChecking=no -o LogLevel=quiet ${username}@${newPublicDnsName} : || iferr "Fail to ssh to new instance ${line}"
+	log "done" 
 
 	log "Copying rsa public key into instance ${line}..."
 	ssh -o StrictHostKeyChecking=no -o LogLevel=quiet ${username}@${newPublicDnsName} "echo ${rsa} >> ~/.ssh/authorized_keys"
