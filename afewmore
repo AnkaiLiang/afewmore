@@ -54,11 +54,9 @@ do
 			;;
 		d)
 			catalog=${OPTARG}
-			if [ -d ${catalog} ];
+			if [[ $catalog == -* ]];
 			then
-				log "-d's argument is not a valid directory path"
-			else
-				echo "-d's argument is a valid directory path" >&2	
+				echo "-d's argument is not a valid path" >&2
 				usage
 				exit 1;
 			fi
