@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 catalog="/data"
 num=10
@@ -27,7 +27,7 @@ usage()
 getInfo()
 {
 	((cat temp.txt | grep "\"$1\"") || (echo "Fail to get the $1 info." >&2; exit 1;))\
-	 | tr ":\"," " "  | awk '{print $2}' | uniq | grep -v "^$"
+	 | tr ":\"," " "  | awk '{print $2}' | sort | uniq | grep -v "null" | grep -v "^$"
 #	delete the null line
 
 }
@@ -54,9 +54,11 @@ do
 			;;
 		d)
 			catalog=${OPTARG}
-			if [[ $catalog == -* ]];
+			if [ -d ${catalog} ];
 			then
-				echo "-d's argument is not a valid path" >&2
+				log "-d's argument is not a valid directory path"
+			else
+				echo "-d's argument is a valid directory path" >&2	
 				usage
 				exit 1;
 			fi
@@ -167,14 +169,14 @@ for line in $(cat listInstanceId.txt)
 do
 	aws ec2 describe-instances --filters "Name=instance-id,Values=${line}" > temp.txt
 	state=$(getInfo Name)
-	count=1;
+	i=0;
 	while [ "${state}" != "running" ];
 	do
-		count++;
+		i=$(( $i + 1 ))
 		sleep 5s
 		aws ec2 describe-instances --filters "Name=instance-id,Values=${line}" > temp.txt
 		state=$(getInfo Name) # loop until state = running
-		if [ count>15 ]
+		if [ ${i} -gt 10 ]
 		then
 			echo "Overtime, fail to get PublicDnsName for instance ${line}" >&2
 		fi
@@ -185,8 +187,18 @@ do
 	log "newPublicDnsName=${newPublicDnsName}"
 
 	log "Testing ssh to new instance ${line}..."
-
-	ssh -o StrictHostKeyChecking=no -o LogLevel=quiet ${username}@${newPublicDnsName} : || iferr "Fail to ssh to new instance ${line}"
+	i=0;
+	ssh -o StrictHostKeyChecking=no -o LogLevel=quiet ${username}@${newPublicDnsName} :
+	while [ $? != 0 ];
+	do
+		i=$(( $i + 1 ))
+		if [ ${i} -gt 15 ]
+		then
+			echo "Fail ssh to new instance ${line}" >&2
+		fi
+		sleep 5s
+		ssh -o StrictHostKeyChecking=no -o LogLevel=quiet ${username}@${newPublicDnsName} :
+	done
 	log "done" 
 
 	log "Copying rsa public key into instance ${line}..."
