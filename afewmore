@@ -34,7 +34,7 @@ getInfo()
 getAllInfo()
 {
 	InstanceId=$1
-	aws ec2 describe-instances --filters "Name=instance-id,Values=${InstanceId}" > temp.txt
+	aws ec2 describe-instances --output json --filters "Name=instance-id,Values=${InstanceId}" > temp.txt
 	PublicDnsName=$(getInfo PublicDnsName)
 	ImageId=$(getInfo ImageId)
 	InstanceType=$(getInfo InstanceType)
@@ -112,7 +112,7 @@ log "Tring to ssh to target instance..."
 
 ## get the username according to image-id
 
-aws ec2 describe-images --filters "Name=image-id, Values=${ImageId}" > temp.txt
+aws ec2 describe-images --output json --filters "Name=image-id, Values=${ImageId}" > temp.txt
 ImageName=$(getInfo Name)
 username=$(cat UsernameTable | awk -F ":" -v pat="${ImageName}" 'pat ~ $1 { print $2 }' | head -1)
 if [ -z ${username} ]
@@ -165,14 +165,14 @@ sleep 100s
 ## Deal with each new Instance
 for line in $(cat listInstanceId.txt)
 do
-	aws ec2 describe-instances --filters "Name=instance-id,Values=${line}" > temp.txt
+	aws ec2 describe-instances --output json --filters "Name=instance-id,Values=${line}" > temp.txt
 	state=$(getInfo Name)
 	i=0;
 	while [ "${state}" != "running" ];
 	do
 		i=$(( $i + 1 ))
 		sleep 5s
-		aws ec2 describe-instances --filters "Name=instance-id,Values=${line}" > temp.txt
+		aws ec2 describe-instances --output json --filters "Name=instance-id,Values=${line}" > temp.txt
 		state=$(getInfo Name) # loop until state = running
 		if [ ${i} -gt 10 ]
 		then
@@ -223,6 +223,7 @@ cat listInstanceId.txt
 log "Success."
 
 rm temp.txt
+rm listInstanceId.txt
 exit 0
 
 

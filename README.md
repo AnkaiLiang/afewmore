@@ -139,3 +139,5 @@ Tricky point, sometimes the response from aws contains some null data in some at
 
 7. "Host key verification failed." I fail to use `scp` transfer data from remote instance to another remote one. I realized scp can't do that between two remote nodes. I need to copy one node's rsa public key to the other, then use ssh into one remote to do that transmission.
 8. Deal with the directory path. Before using `scp`, I have to make sure the directory's parent path exists. Use pattern matching to adjust `${path}` and `mkdir -p` to create in new instance.
+
+9. Implement all basic function!
