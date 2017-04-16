@@ -22,7 +22,7 @@ iferr()
 }
 usage() 
 {
-	echo "Usage: \n          afewmore [-hv] [-d dir] [-n num] instance"
+	echo -e "Usage: afewmore [-hv] [-d dir] [-n num] instance\n\n  -d dir  Copy the contents of this data directory from the original source\n          instance to all new instances. If not specified, defaults\n          to /data.\n\n  -h      Print a usage statement and exit.\n\n  -n num  Create this many new instances. If not specified, defaults to\n          10.\n\n  -v      Be verbose."
 }
 getInfo()
 {
@@ -54,17 +54,23 @@ do
 			;;
 		d)
 			catalog=${OPTARG}
-			if [[ $catalog == -* ]];
+			if ! [[ $catalog =~ ^/.*$ ]];
 			then
-				echo "-d's argument is not a valid path" >&2
+				echo "-d's argument is not a valid Unix style path" >&2
 				usage
 				exit 1;
 			fi
 			;;
 		n)	
-			if [[ $OPTARG =~ ^[0-9]*$ ]]
+			if [[ $OPTARG =~ ^[0-9]+$ ]]
 			then
+			    if [ $OPTARG -gt 0 ]
+			    then
 				num=${OPTARG}
+			    else
+				echo "-n's argument must be greater than 0." >&2
+				exit 1;
+			    fi
 			else
 				echo "-n's argument is not a number." >&2
 				usage
@@ -75,7 +81,7 @@ do
 			verbose="true"
 			;;
 		\?)
-			echo "Unkonw argument: -$OPTARG" >&2
+			echo "Unknown argument: -$OPTARG" >&2
 			usage
 			exit 1
 			;;
@@ -101,6 +107,12 @@ log "Tring to acquire target instance's info..."
 # get the info for origin instance
 
 targetId=$1
+if ! [[ $targetId =~ ^i-[a-z0-9]+$ ]]
+then
+    echo "Invalid instance ID '$targetId' provided." >&2
+    usage
+    exit 1;
+fi
 getAllInfo $targetId
 targetPublicDns=${PublicDnsName}
 
@@ -133,9 +145,9 @@ fi
 
 if ssh -o StrictHostKeyChecking=no ${username}@${targetPublicDns} test -e ${catalog};
 then
-	log "${catalog} exists"
+	log "${catalog} exists on instance '$targetId'"
 else 
-	echo "${catalog} does not exists, please check the directory path" >&2
+	echo "${catalog} does not exist on instance '$targetId', please check the directory path" >&2
 	exit 1
 fi
 
