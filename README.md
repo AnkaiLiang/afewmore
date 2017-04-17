@@ -3,8 +3,14 @@ This is a task of CS615 in Stevens Institute of Technology.
 
 Author
 
-* Eric Fitzpatrick
+* [Eric Fitzpatrick](https://github.com/efitzpa1)
 * [Ankai Liang](https://github.com/AnkaiLiang)
+
+# Program description
+For this homework assignment, our group used Bash as our programming language of choice. Bash allowed for us to easily interface with common shell commands and the AWS CLI tool. Since Bash has such low overhead, it also allows us to have competitive performance and write functionality compactly and directly.
+
+# Challenges faced
+The main challenge that our group faced is how to determine when a newly created EC2 instance is ready to ssh into. We got around this challenge by using sleep(1) commands to first wait for the instance state to change to 'Running' and then attempting to ssh into the instance a few times after small time intervals.
 
 ## Manual
 ```
