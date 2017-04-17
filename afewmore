@@ -212,7 +212,7 @@ do
 
 	log "Prepare the directory on new instance ${line}"
 	newcatalog="${catalog%/?*}"
-	ssh -o StrictHostKeyChecking=no -o LogLevel=quiet ${username}@${newPublicDnsName} "test -e ${newcatalog:="/"} || mkdir -p ${newcatalog}"
+	ssh -o StrictHostKeyChecking=no -o LogLevel=quiet ${username}@${newPublicDnsName} "(test -e ${newcatalog:="/"} || sudo mkdir -p ${newcatalog}) && ([ -w ${newcatalog} ] && [ -x ${newcatalog} ] || sudo chmod a+wx ${newcatalog})"
 	iferr "Fail to create directory path on instance ${line}"
 	log "Ready. newcatalog=$newcatalog"
 
