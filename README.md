@@ -148,3 +148,7 @@ After communication with classmates, I knew that `scp` has a option '-3', which 
 8. Deal with the directory path. Before using `scp`, I have to make sure the directory's parent path exists. Use pattern matching to adjust `${path}` and `mkdir -p` to create in new instance.
 9. Implement all basic function!
 10. When testing create instance with other images, I found some of OS login user accounts don't have the authority to create new directory or files in some specific place. So I shoud chang the target directory authority to allow ssh write and execute.
+
+### Eric Fitzpatrick
+
+Ankai and I chose to both develop our own independent versions of the 'afewmore' program and then collaborate to merge the best parts of our implementations together. I also used Bash so this process was straightforward. We took very similar approaches so I chose to refine the version on Ankai's GitHub repository to match up to mine and use as our submission. My main contributions to his version was increasing the error handling capabilities of the program, increasing the verbosity of the usage statement (included flag information), and modifying the script to use the mktemp(1) function instead of an in-directory temp.txt file which could have potentially deleted or modified a user's temp.txt file unintentionally. I also added a trap(1) statement to delete this temporary file upon a SIGINT signal (control+c).
