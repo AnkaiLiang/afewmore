@@ -132,7 +132,7 @@ log "Tring to ssh to target instance..."
 
 ## get the username according to image-id
 
-aws ec2 describe-images --output json --filters "Name=image-id, Values=${ImageId}" > tempOB.txt
+aws ec2 describe-images --output json --filters "Name=image-id, Values=${ImageId}" > $tmp
 ImageName=$(getInfo Name)
 username=$(cat UsernameTable | awk -F ":" -v pat="${ImageName}" 'pat ~ $1 { print $2 }' | head -1)
 if [ -z ${username} ]
