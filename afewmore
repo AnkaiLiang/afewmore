@@ -4,6 +4,12 @@ catalog="/data"
 num=10
 verbose="false"
 
+cleanup()
+{
+    echo "Cleaning up temporary file"
+    rm -f $tmp
+    exit 1
+}
 log()
 {
 	if [ "$verbose" = "true" ];
@@ -26,7 +32,7 @@ usage()
 }
 getInfo()
 {
-	((cat temp.txt | grep "\"$1\"") || (echo "Fail to get the $1 info." >&2; exit 1;))\
+	((cat $tmp | grep "\"$1\"") || (echo "Fail to get the $1 info." >&2; exit 1;))\
 	 | tr ":\"," " "  | awk '{print $2}' | sort | uniq | grep -v "null" | grep -v "^$"
 #	delete the null line
 
@@ -34,7 +40,7 @@ getInfo()
 getAllInfo()
 {
 	InstanceId=$1
-	aws ec2 describe-instances --output json --filters "Name=instance-id,Values=${InstanceId}" > temp.txt
+	aws ec2 describe-instances --output json --filters "Name=instance-id,Values=${InstanceId}" > $tmp
 	PublicDnsName=$(getInfo PublicDnsName)
 	ImageId=$(getInfo ImageId)
 	InstanceType=$(getInfo InstanceType)
@@ -49,7 +55,7 @@ while getopts ":d:n:hv" arg;
 do
 	case ${arg} in
 		h)
-			cat ./afewmore.1.txt
+			usage
 			exit 0
 			;;
 		d)
@@ -113,6 +119,8 @@ then
     usage
     exit 1;
 fi
+tmp=$(mktemp)
+trap cleanup SIGINT
 getAllInfo $targetId
 targetPublicDns=${PublicDnsName}
 
@@ -124,7 +132,7 @@ log "Tring to ssh to target instance..."
 
 ## get the username according to image-id
 
-aws ec2 describe-images --output json --filters "Name=image-id, Values=${ImageId}" > temp.txt
+aws ec2 describe-images --output json --filters "Name=image-id, Values=${ImageId}" > tempOB.txt
 ImageName=$(getInfo Name)
 username=$(cat UsernameTable | awk -F ":" -v pat="${ImageName}" 'pat ~ $1 { print $2 }' | head -1)
 if [ -z ${username} ]
@@ -166,7 +174,7 @@ log "done"
 log "Trying to create ${num} new instances..."
 
 aws ec2 run-instances --image-id ${ImageId} --count ${num} --instance-type\
- ${InstanceType} --key-name ${KeyName} --security-groups ${GroupName} --placement AvailabilityZone=${AvailabilityZone} > temp.txt
+ ${InstanceType} --key-name ${KeyName} --security-groups ${GroupName} --placement AvailabilityZone=${AvailabilityZone} > $tmp
 iferr "Fail to create new instances, plase check awscli configuration and network"
 
 log "done"
@@ -177,14 +185,14 @@ sleep 100s
 ## Deal with each new Instance
 for line in $(cat listInstanceId.txt)
 do
-	aws ec2 describe-instances --output json --filters "Name=instance-id,Values=${line}" > temp.txt
+	aws ec2 describe-instances --output json --filters "Name=instance-id,Values=${line}" > $tmp
 	state=$(getInfo Name)
 	i=0;
 	while [ "${state}" != "running" ];
 	do
 		i=$(( $i + 1 ))
 		sleep 5s
-		aws ec2 describe-instances --output json --filters "Name=instance-id,Values=${line}" > temp.txt
+		aws ec2 describe-instances --output json --filters "Name=instance-id,Values=${line}" > $tmp
 		state=$(getInfo Name) # loop until state = running
 		if [ ${i} -gt 10 ]
 		then
@@ -234,7 +242,7 @@ done
 cat listInstanceId.txt
 log "Success."
 
-rm temp.txt
+rm $tmp
 rm listInstanceId.txt
 exit 0
 
